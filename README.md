@@ -30,6 +30,7 @@ Run `./sync-claude-context.sh` to symlink skills into `~/.claude/skills/`.
 |-------|---------|-------------|
 | `prompt-improver` | `/prompt-improver` | Sharpens vague prompts before executing. Shows improved version so you learn better prompting. |
 | `skill-export` | `/skill-export` | Exports Claude.ai skills to repo-ready format with security classification and zip packaging. |
+| `knowledge-capture` | `/knowledge-capture` | Captures learning moments from Claude sessions and pushes them to Capacities. |
 
 ## Adding a new skill
 
