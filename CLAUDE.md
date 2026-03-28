@@ -42,6 +42,9 @@ Instructions for Claude...
 |-------|------|
 | `prompt-improver` | `skills/prompt-improver/SKILL.md` |
 | `skill-export` | `skills/skill-export/SKILL.md` |
+| `knowledge-capture` | `skills/knowledge-capture/SKILL.md` |
+| `content-spec` | `skills/content-spec/SKILL.md` |
+| `skill-sync` | `skills/skill-sync/SKILL.md` |
 
 ## No build/test/lint
 

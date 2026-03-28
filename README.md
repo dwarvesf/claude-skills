@@ -32,6 +32,7 @@ Run `./sync-claude-context.sh` to symlink skills into `~/.claude/skills/`.
 | `skill-export` | `/skill-export` | Exports Claude.ai skills to repo-ready format with security classification and zip packaging. |
 | `knowledge-capture` | `/knowledge-capture` | Captures learning moments from Claude sessions and pushes them to Capacities. |
 | `content-spec` | `/content-spec` | Enforces a requirement/specification phase before substantial content work (500+ words, docs, translations). |
+| `skill-sync` | `/skill-sync` | Syncs skills from Claude.ai to GitHub repo via MCP Worker. Security classifies before pushing. |
 
 ## Adding a new skill
 

@@ -12,7 +12,7 @@ Capture learning moments from Claude sessions and persist them to Capacities.
 - macOS with Capacities desktop app running (for X-Callback URL push)
 - For Claude Desktop/Cowork: Desktop Commander or similar bash MCP server installed
 - For Claude Code: /learned and /push-learned commands installed at ~/.claude/commands/
-- Fallback: saves to ~/knowledge/learned-today.md if Capacities is unavailable
+- Fallback: saves to ./.learned/ (project-local) or ~/.learned/ (no project context) if Capacities is unavailable
 
 ## Triggers
 
@@ -124,23 +124,36 @@ Tags: #topic #subtopic
 
 If the `open capacities://...` command fails (app not running, URL too long):
 
+Save each capture as a separate file in the project-local `.learned/` directory (or `~/.learned/` if no project context):
+
 ```bash
-mkdir -p ~/knowledge
-cat >> ~/knowledge/learned-today.md << 'EOF'
+# Use project-local dir if in a git repo, otherwise home-level
+if git rev-parse --show-toplevel &>/dev/null; then
+  DIR="$(git rev-parse --show-toplevel)/.learned"
+else
+  DIR=~/.learned
+fi
+mkdir -p "$DIR"
+
+# Generate slug from title: lowercase, spaces to hyphens, strip special chars
+SLUG=$(echo "[TITLE]" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//')
+DATE=$(date +%Y-%m-%d)
+FILEPATH="${DIR}/${DATE}-${SLUG}.md"
+
+cat > "$FILEPATH" << 'EOF'
 ---
 title: [TITLE]
 type: [Definition|Atomic note|Page]
 date: [ISO date]
 tags: [comma-separated]
+pushed: false
 ---
 
 [MARKDOWN BODY]
-
----
 EOF
 ```
 
-Tell the user: "Capacities wasn't available. Saved to ~/knowledge/learned-today.md for manual transfer."
+Tell the user: "Capacities wasn't available. Saved to [filepath]. Run `/push-learned` later to push to Capacities."
 
 ## Batch mode
 
@@ -156,8 +169,8 @@ When the user says "extract my learnings" or "checkpoint":
 
 For Claude Code, this skill's logic is split into:
 - `/learned` command: cherry-pick the last response and push immediately
-- `/push-learned` command: batch push from ./learned-today.md accumulator
-- CLAUDE.md auto-capture rules: silently log to ./learned-today.md during coding
+- `/push-learned` command: batch push all files from ./.learned/ directory
+- CLAUDE.md auto-capture rules: silently save each learning to ./.learned/ during coding (one file per capture, named `YYYY-MM-DD-slug.md`)
 
 These slash commands should be installed at `~/.claude/commands/learned.md` and `~/.claude/commands/push-learned.md`. The CLAUDE.md addition goes into the user's global CLAUDE.md.
 
