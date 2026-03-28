@@ -116,28 +116,44 @@ For each skill, read its content and scan for sensitive data.
 |-------|----------|-------------|--------|
 | prompt-improver | SAFE | New (not in repo) | Push |
 | content-spec | SAFE | Changed (local newer) | Push |
-| notion-ops | SENSITIVE | Changed (repo newer) | Block |
+| notion-ops | SENSITIVE -> REFACTORED | Changed (repo newer) | Push (review below) |
 
-Ready to push: prompt-improver, content-spec
-Blocked: notion-ops (SENSITIVE + repo is newer)
+Ready to push: prompt-improver, content-spec, notion-ops (refactored)
+```
+
+For any SENSITIVE skill that was auto-refactored, show a summary of changes below the table:
+```
+### notion-ops (auto-refactored)
+Replaced:
+- 15 Notion database IDs -> context file references
+- 9 collection:// URIs -> context file references
+- 2 hardcoded names -> role placeholders
+Added: Prerequisites section (requires notion-reference.md)
+
+[View full refactored version] or [skip this skill]
 ```
 
 Wait for user confirmation before pushing.
 
-### Step 4: Refactor sensitive skills (if user requests)
+### Step 4: Auto-refactor sensitive skills
 
-If the user wants to push a SENSITIVE skill:
+For any skill classified as SENSITIVE, automatically refactor before showing the report:
 
 1. Replace hardcoded Notion database IDs with context file references:
    ```
    BEFORE: Page ID: `9d468753ebb44977a8dc156428398a6b`
    AFTER: Read the Contractors Page ID from the user's context file
    ```
-2. Replace company-specific payment channels, rate structures, org details with generic descriptions
-3. Keep all workflow logic, step sequences, output formats, business rules intact
-4. Add a Prerequisites section noting required context files
+2. Replace `collection://` URIs with references to the user's context config
+3. Replace API keys/tokens with environment variable references (`$ENV_VAR` or "configured in user's context file")
+4. Replace company-specific payment channels, rate structures, org details with generic descriptions
+5. Replace hardcoded employee/client/contractor names with role placeholders
+6. Keep all workflow logic, step sequences, output formats, business rules intact
+7. Add a Prerequisites section noting required context files
 
-Show the refactored version for approval before pushing.
+The refactored version is shown inline in the sync report (Step 3) so the user can review before confirming the push. No extra "refactor it" step needed.
+
+**If auto-refactor misses something or breaks logic**, the user can say "edit the refactored version" before confirming.
 
 ### Step 5: Push via MCP
 

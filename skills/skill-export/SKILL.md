@@ -58,9 +58,9 @@ Found:
 Recommendation: Refactor to read IDs from context file before adding to team repo.
 ```
 
-### Step 3: Refactor if needed
+### Step 3: Auto-refactor sensitive skills
 
-If the skill is SENSITIVE and the user wants it in the team repo:
+If the skill is classified as SENSITIVE, automatically refactor it before packaging:
 
 1. Replace every hardcoded Notion database ID with a context file reference:
    ```
@@ -71,16 +71,24 @@ If the skill is SENSITIVE and the user wants it in the team repo:
    - Read the Contractors Page ID from the user's context file (notion-reference.md)
    ```
 
-2. Replace company-specific payment channels, rate structures, or org details with generic descriptions
+2. Replace `collection://` URIs with references to the user's context config
 
-3. Keep all workflow logic, step sequences, output formats, and business rules intact. Only strip the data layer.
+3. Replace API keys/tokens with environment variable references
 
-4. Add a "Prerequisites" section at the top of the refactored skill:
+4. Replace company-specific payment channels, rate structures, or org details with generic descriptions
+
+5. Replace hardcoded employee/client/contractor names with role placeholders
+
+6. Keep all workflow logic, step sequences, output formats, and business rules intact. Only strip the data layer.
+
+7. Add a "Prerequisites" section at the top of the refactored skill:
    ```
    ## Prerequisites
    This skill requires a `notion-reference.md` file in your working folder (Cowork)
    or referenced in your CLAUDE.md (Claude Code) with your Notion database IDs.
    ```
+
+Show the refactored version with a summary of what was replaced. The user reviews and confirms before the skill is packaged. If auto-refactor misses something or breaks logic, the user can request edits before proceeding.
 
 ### Step 4: Package and output
 
