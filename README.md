@@ -33,6 +33,7 @@ Run `./sync-claude-context.sh` to symlink skills into `~/.claude/skills/`.
 | `knowledge-capture` | `/knowledge-capture` | Captures learning moments from Claude sessions and pushes them to Capacities. |
 | `content-spec` | `/content-spec` | Enforces a requirement/specification phase before substantial content work (500+ words, docs, translations). |
 | `skill-sync` | `/skill-sync` | Syncs skills from Claude.ai to GitHub repo via MCP Worker. Security classifies before pushing. |
+| `skill-import` | `/skill-import` | Imports skills from GitHub repo into Claude.ai. Reverse of skill-sync with diff check and conflict detection. |
 
 ## Adding a new skill
 

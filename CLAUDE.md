@@ -45,6 +45,7 @@ Instructions for Claude...
 | `knowledge-capture` | `skills/knowledge-capture/SKILL.md` |
 | `content-spec` | `skills/content-spec/SKILL.md` |
 | `skill-sync` | `skills/skill-sync/SKILL.md` |
+| `skill-import` | `skills/skill-import/SKILL.md` |
 
 ## No build/test/lint
 
