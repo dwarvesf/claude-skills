@@ -1,6 +1,7 @@
 ---
 name: reel-transcript
 description: Extracts transcripts from short-form video URLs and files using Supadata MCP (primary) or local whisper (fallback). Use when the user shares a video URL from Instagram Reels, Facebook videos/reels, Threads video posts, TikTok, Twitter/X, or uploads any video file (mp4, mov, webm). Trigger on "transcribe this reel", "extract transcript from reel", "what does this reel say", "transcribe this video", or any instagram.com/reel/*, facebook.com/watch/*, facebook.com/reel/*, threads.net/*/post/*, tiktok.com/*, x.com/*/status/* URL. Pairs with knowledge-capture to push transcripts to the GitHub repo.
+updated: 2026-03-28T08:56:00Z
 ---
 
 # Reel Transcript
