@@ -1,6 +1,7 @@
 ---
 name: skill-sync
 description: Syncs skills from Claude.ai to the dwarvesf/claude-skills GitHub repo via MCP. Use when the user says "sync skills", "push skills to repo", "/skill-sync", or wants to automatically push skills from /mnt/skills/user/ to GitHub without manual zip/unzip. Requires the Github MCP Worker to be connected.
+updated: 2026-03-28T06:37:00Z
 ---
 
 # Skill Sync
