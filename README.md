@@ -31,6 +31,9 @@ Run `./sync-claude-context.sh` to symlink skills into `~/.claude/skills/`.
 | `prompt-improver` | Sharpens vague prompts before executing |
 | `content-spec` | Enforces a spec phase before substantial content work |
 | `knowledge-capture` | Captures learning moments and pushes to Capacities |
+| `reel-transcript` | Extracts transcripts from short-form video URLs via Supadata or whisper |
+| `twitter-capture` | Captures Twitter/X threads and posts into markdown knowledge notes |
+| `youtube-capture` | Captures YouTube video transcripts into markdown knowledge notes |
 | `skill-export` | Exports skills to repo-ready zip format |
 | `skill-sync` | Pushes skills from Claude.ai to GitHub repo via MCP |
 | `skill-import` | Imports skills from GitHub repo into Claude.ai |

@@ -44,6 +44,9 @@ Instructions for Claude...
 | `skill-export` | `skills/skill-export/SKILL.md` |
 | `knowledge-capture` | `skills/knowledge-capture/SKILL.md` |
 | `content-spec` | `skills/content-spec/SKILL.md` |
+| `reel-transcript` | `skills/reel-transcript/SKILL.md` |
+| `twitter-capture` | `skills/twitter-capture/SKILL.md` |
+| `youtube-capture` | `skills/youtube-capture/SKILL.md` |
 | `skill-sync` | `skills/skill-sync/SKILL.md` |
 | `skill-import` | `skills/skill-import/SKILL.md` |
 
