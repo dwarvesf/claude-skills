@@ -26,13 +26,17 @@ Run `./sync-claude-context.sh` to symlink skills into `~/.claude/skills/`.
 
 ## Skills
 
-| Skill | Trigger | Description |
-|-------|---------|-------------|
-| `prompt-improver` | `/prompt-improver` | Sharpens vague prompts before executing. Shows improved version so you learn better prompting. |
-| `skill-export` | `/skill-export` | Exports Claude.ai skills to repo-ready format with security classification and zip packaging. |
-| `knowledge-capture` | `/knowledge-capture` | Captures learning moments from Claude sessions and pushes them to Capacities. |
-| `content-spec` | `/content-spec` | Enforces a requirement/specification phase before substantial content work (500+ words, docs, translations). |
-| `skill-sync` | `/skill-sync` | Syncs skills from Claude.ai to GitHub repo via MCP Worker. Security classifies before pushing. |
+| Skill | Description |
+|-------|-------------|
+| `prompt-improver` | Sharpens vague prompts before executing |
+| `content-spec` | Enforces a spec phase before substantial content work |
+| `knowledge-capture` | Captures learning moments and pushes to Capacities |
+| `reel-transcript` | Extracts transcripts from short-form video URLs via Supadata or whisper |
+| `twitter-capture` | Captures Twitter/X threads and posts into markdown knowledge notes |
+| `youtube-capture` | Captures YouTube video transcripts into markdown knowledge notes |
+| `skill-export` | Exports skills to repo-ready zip format |
+| `skill-sync` | Pushes skills from Claude.ai to GitHub repo via MCP |
+| `skill-import` | Imports skills from GitHub repo into Claude.ai |
 
 ## Adding a new skill
 
