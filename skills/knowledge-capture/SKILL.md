@@ -1,7 +1,7 @@
 ---
 name: knowledge-capture
 description: Captures learning moments from Claude sessions and persists them to a GitHub knowledge repo via the GitHub MCP Worker. Use when the user says "save this", "push this to my notes", "capture this", "extract my learnings", "checkpoint", or runs /learned. Also triggers at the end of sessions with significant learning content, or when Claude explains a root cause, makes an architectural decision, or breaks a debugging spiral. Works in Claude.ai Chat, Cowork (via Desktop Commander bash), and Claude Code (via /learned slash command).
-updated: 2026-03-29T06:00:00Z
+updated: 2026-03-29T08:00:00Z
 ---
 
 # Knowledge Capture
@@ -67,7 +67,7 @@ The note should read as a standalone reference, not a chat transcript.
 
 ### Step 3: Format
 
-**Reference templates (use as starting points, not rigid molds):**
+**Reference templates (use as starting points, adapt to content):**
 
 **For Q&A (most common):**
 ```markdown
@@ -459,16 +459,16 @@ Found [N] learning moments to capture:
 1. "[title]" (type: [Comparison/Q&A/Decision Record/etc.])
    Topic: [folder] | Tags: [tag1, tag2]
    Layout:
-     ## Overview (what's being compared, 2 sentences)
-     ## Comparison table (4 criteria x 3 options)
-     ## Verdict (opinionated recommendation)
+     ## Overview -- what's being compared, 2 sentences
+     ## Comparison table -- 4 criteria x 3 options
+     ## Verdict -- opinionated recommendation
    
 2. "[title]" (type: [type])
    Topic: [folder] | Tags: [tag1, tag2]
    Layout:
-     ## Context (the problem, 1 paragraph)
-     ## The insight (core learning, with code example)
-     ## When this matters (practical trigger)
+     ## Context -- the problem, 1 paragraph
+     ## The insight -- core learning, with code example
+     ## When this matters -- practical trigger
 
 3. "[title]" (type: [type])
    Topic: [folder] | Tags: [tag1, tag2]
