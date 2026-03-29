@@ -1,7 +1,7 @@
 ---
 name: skill-sync
 description: Syncs skills from Claude.ai to the dwarvesf/claude-skills GitHub repo via MCP. Use when the user says "sync skills", "push skills to repo", "/skill-sync", or wants to automatically push skills from /mnt/skills/user/ to GitHub without manual zip/unzip. Requires the Github MCP Worker to be connected.
-updated: 2026-03-28T06:37:00Z
+updated: 2026-03-29T10:50:00Z
 ---
 
 # Skill Sync
@@ -100,9 +100,11 @@ For each skill, read its content and scan for sensitive data.
 1. **Notion database IDs**: UUIDs matching `[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}`
 2. **Collection URIs**: `collection://` prefixed strings
 3. **API keys or tokens**: patterns like `sk-`, `xoxb-`, bearer tokens, `key-`
-4. **Company-specific identifiers**: Airwallex account refs, bank account numbers, internal URLs (e.g. `*.d.foundation`, `*.dwarvesf.com`)
-5. **Hardcoded names**: Specific employee names, client names, contractor names
-6. **Space IDs or account IDs**: Capacities spaceId, Slack workspace IDs
+4. **Long hex strings**: any hex string 40+ characters (likely auth tokens, hashes, or secrets)
+5. **Internal/custom worker URLs**: `*.workers.dev`, `*.d.foundation`, `*.dwarvesf.com` domains
+6. **Company-specific identifiers**: Airwallex account refs, bank account numbers, internal URLs
+7. **Hardcoded names**: Specific employee names, client names, contractor names
+8. **Space IDs or account IDs**: Capacities spaceId, Slack workspace IDs
 
 **Classify each skill:**
 - **SAFE**: No sensitive data. Push directly.
@@ -156,9 +158,51 @@ The refactored version is shown inline in the sync report (Step 3) so the user c
 
 **If auto-refactor misses something or breaks logic**, the user can say "edit the refactored version" before confirming.
 
-### Step 5: Push via MCP
+### Step 5: Post-refactor verification (HARD GATE)
 
-For each approved skill:
+**This step is mandatory. push_skill MUST NOT be called until this step passes.**
+
+After refactoring (Step 4) and before pushing (Step 6), run the security scan a second time on the **exact content that will be pushed**. This catches anything the auto-refactor missed.
+
+**Verification process:**
+
+1. Take the final content string that will go into `push_skill(content: ...)`
+2. Run the same pattern checks from Step 3 against it:
+   - `[0-9a-f]{32}` or UUID patterns (Notion IDs, space IDs)
+   - `Bearer [A-Za-z0-9]` (auth tokens)
+   - `sk-`, `xoxb-`, `key-` prefixes
+   - `collection://` URIs
+   - Hardcoded URLs with `.workers.dev`, `.d.foundation`, `.dwarvesf.com`
+   - Any string that looks like a hex token (40+ hex chars)
+3. If ANY pattern matches: **STOP. Do not push.** Show the user exactly what was found:
+
+```
+BLOCKED: Post-refactor scan found secrets in knowledge-capture
+
+Line 297: Authorization: Bearer 519c60cc9b5c...  (auth token)
+Line 296: https://assets.han-ws.workers.dev/upload  (internal URL)
+
+These must be replaced before pushing. Fix and re-verify.
+```
+
+4. If the scan is clean, show the user a confirmation block:
+
+```
+Pre-push verification PASSED for knowledge-capture
+- 0 secrets found
+- 0 internal URLs found
+- 0 hardcoded IDs found
+
+Content ready to push (XXX lines). Confirm? [push] [show full content] [cancel]
+```
+
+5. **Wait for explicit user confirmation.** The user must say "push", "yes", "confirm", or equivalent. Do NOT interpret "sync this skill" or "push this" from earlier in the conversation as confirmation for this step.
+
+**Why this exists:** Auto-refactor is best-effort. It uses pattern matching and can miss secrets in unusual formats, secrets inside code blocks, or secrets that were added after the refactor patterns were written. The verification scan is the safety net. It runs on the actual bytes being pushed, not on what we think we refactored.
+
+### Step 6: Push via MCP
+
+For each approved skill (that passed Step 5 verification):
 
 1. Ensure the `updated` field in frontmatter is set to today's date
 2. Read the full SKILL.md content
@@ -167,7 +211,7 @@ For each approved skill:
    - `name`: skill name in kebab-case
    - `content`: full SKILL.md content (with updated date)
    - `files`: array of extra files if the skill has supporting assets
-   - `message`: "add <name> skill" for new, "update <name> skill" for existing
+   - `message`: "add <n> skill" for new, "update <n> skill" for existing
 
 Example:
 ```
@@ -181,7 +225,7 @@ push_skill(
 )
 ```
 
-### Step 6: Report results
+### Step 7: Report results
 
 After all pushes complete, show:
 
@@ -222,3 +266,4 @@ When the user says "sync all" or "push all skills":
 6. **Confirm before pushing.** Never auto-push without user seeing the report.
 7. **Always set the `updated` date.** Every push must update the frontmatter date.
 8. **Warn on repo-newer conflicts.** If the repo version is newer, the user must explicitly confirm overwrite.
+9. **Post-refactor verification is not optional.** The Step 5 scan must run on the exact content being pushed. Refactoring and pushing in the same breath without a verification pass is a workflow violation. If you catch yourself about to call push_skill without having shown the user a "verification PASSED" block, stop.
