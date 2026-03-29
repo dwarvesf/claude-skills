@@ -1,7 +1,7 @@
 ---
 name: knowledge-capture
 description: Captures learning moments from Claude sessions and persists them to a GitHub knowledge repo via the GitHub MCP Worker. Use when the user says "save this", "push this to my notes", "capture this", "extract my learnings", "checkpoint", or runs /learned. Also triggers at the end of sessions with significant learning content, or when Claude explains a root cause, makes an architectural decision, or breaks a debugging spiral. Works in Claude.ai Chat, Cowork (via Desktop Commander bash), and Claude Code (via /learned slash command).
-updated: 2026-03-29T08:00:00Z
+updated: 2026-03-29T10:30:00Z
 ---
 
 # Knowledge Capture
@@ -11,8 +11,8 @@ Capture learning moments from Claude sessions and persist them to the GitHub kno
 ## Prerequisites
 
 - GitHub MCP Worker deployed and connected as a custom connector in Claude.ai
-- For image capture: `assets` Cloudflare Worker deployed (R2 upload endpoint)
-- For SVG-to-PNG: `cairosvg` Python package (Claude.ai container) or `rsvg-convert` (macOS)
+- For image capture: `assets` Cloudflare Worker deployed (R2 upload endpoint). Set `R2_UPLOAD_ENDPOINT` and `R2_AUTH_TOKEN` environment variables (or configure in user's context file).
+- For SVG-to-PNG fallback: `cairosvg` Python package (Claude.ai container) or `rsvg-convert` (macOS). Only needed if PNG is explicitly required.
 - Fallback: saves to `.learned/` locally if GitHub MCP is unavailable
 
 ## Triggers
@@ -66,8 +66,6 @@ The note should read as a standalone reference, not a chat transcript.
 **Q&A-specific cleaning:** Rewrite the user's question to be clear and context-free. The original question might be sloppy, shorthand, or assume shared context ("why doesn't this work?" becomes "Why does Python's asyncio.run() raise RuntimeError inside Jupyter notebooks?"). The answer should be direct and self-contained, not a reply to someone.
 
 ### Step 3: Format
-
-**Reference templates (use as starting points, adapt to content):**
 
 **For Q&A (most common):**
 ```markdown
@@ -232,7 +230,16 @@ The `topic` param determines which folder the note lands in. The repo is organiz
 1. **Existing folder fits clearly** -- use it. E.g. a note about MCP schema caching goes in `mcp/`.
 2. **No existing folder fits** -- propose a new one. Keep it short, lowercase, hyphenated. E.g. `nodejs`, `finance`, `devops`.
 3. **Content spans multiple domains** -- prefer the **vertical/domain** folder over the technique/tool folder. The repo is organized by "what is this about" not "what tool was used." "Extracting YouTube transcripts via Node.js proxy tricks" goes in `youtube/` (the domain), not `nodejs/` (the technique). The reasoning: you'll search the repo by domain ("what do I know about YouTube?"), not by implementation detail ("what have I done with undici?").
-4. **Ambiguous or could go either way** -- present 2-3 options to the user with a brief rationale for each and a recommended pick.
+4. **Ambiguous or could go either way** -- present 2-3 options to the user with a brief rationale for each and a recommended pick. Format:
+
+```
+Topic options:
+  1. `youtube` -- domain knowledge about YouTube transcript extraction (recommended)
+  2. `nodejs` -- the core fix involves Node.js fetch/proxy behavior
+  3. `devops` -- it's infrastructure/container knowledge
+
+I'd go with `youtube` since the knowledge is about YouTube's system. Your call.
+```
 
 **Always preview** the proposed topic, title, and tags before pushing. Never auto-push without user confirmation.
 
@@ -254,9 +261,9 @@ Tags are passed as an array to `push_note` and written into YAML frontmatter by 
 
 **Default behavior: preserve visuals from the conversation.** If the conversation produced diagrams, charts, SVGs, or visualizer output that are relevant to the note being captured, they should be included in the note. Don't drop visuals just because the capture pipeline is text-focused.
 
-**Four sources of visuals to check:**
+**Three sources of visuals to check:**
 
-1. **Visualizer/Excalidraw output generated during this conversation** -- these were created to explain the concept being captured. They belong in the note. Convert to PNG, upload to R2, embed.
+1. **Visualizer/Excalidraw output generated during this conversation** -- these were created to explain the concept being captured. They belong in the note. Upload SVG directly to R2 (preferred) or convert to PNG if SVG uses unresolvable CSS variables. Embed the R2 URL in the note.
 2. **User-uploaded images** (screenshots, diagrams they shared) -- if the image is essential context for the note, upload to R2 and embed. If it's incidental (e.g. a screenshot of an error that's already described in text), skip it.
 3. **New diagrams generated at capture time** -- if the note would benefit from a visual that wasn't created during the conversation (e.g. a summary diagram, architecture overview, or comparison table that didn't exist yet), generate it fresh during the capture step.
 4. **HTML widget output from Visualizer** -- the Visualizer tool produces HTML widgets (comparison tables, phase mappings, interactive diagrams) that render inline in claude.ai. These are often the most information-dense visuals in a conversation and should be captured.
@@ -277,32 +284,116 @@ Tags are passed as an array to `push_note` and written into YAML frontmatter by 
 
 #### Pipeline A: SVG (Claude.ai web, Cowork, Claude Code)
 
+**Default: Upload SVG directly.** SVGs render natively on GitHub and in Obsidian. Skip PNG conversion unless there's a specific reason to rasterize.
+
 ```bash
 # 1. Save SVG to temp file
 cat > /tmp/capture-diagram.svg << 'SVGEOF'
 [SVG CONTENT]
 SVGEOF
 
-# 2. Convert SVG to PNG
-python3 -c "from cairosvg import svg2png; svg2png(url='/tmp/capture-diagram.svg', write_to='/tmp/capture-diagram.png', output_width=1200)"
-
-# 3. Upload PNG to R2
+# 2. Upload SVG directly to R2
 RESPONSE=$(curl -s -X POST $R2_UPLOAD_ENDPOINT \
-  -H "Authorization: Bearer REDACTED_TOKEN" \
-  -H "Content-Type: image/png" \
+  -H "Authorization: Bearer $R2_AUTH_TOKEN" \
+  -H "Content-Type: image/svg+xml" \
   -H "X-Filename: [SLUG]" \
-  --data-binary @/tmp/capture-diagram.png)
+  --data-binary @/tmp/capture-diagram.svg)
 
-# 4. Extract URL
+# 3. Extract URL
 IMAGE_URL=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['url'])")
 
-# 5. Clean up
-rm -f /tmp/capture-diagram.svg /tmp/capture-diagram.png
+# 4. Clean up
+rm -f /tmp/capture-diagram.svg
 ```
 
-**For Claude.ai chat container:** Install `cairosvg` first: `pip install cairosvg --break-system-packages`
+**When to use PNG instead of SVG:**
+- The SVG uses CSS variables (e.g. `var(--color-text-primary)`) that only resolve inside claude.ai. In this case, replace the CSS variables with hardcoded light-theme colors before uploading the SVG, OR convert to PNG.
+- The image source is a raster screenshot or photo (not SVG at all).
+- The user explicitly requests PNG.
 
-**For Cowork/Claude Code (macOS):** `pip3 install cairosvg` or `brew install librsvg` (for `rsvg-convert`)
+**PNG fallback (only when needed):**
+
+cairosvg at default settings produces blurry text. The fix is higher DPI, not wider images. Use a smaller logical width with 2x pixel density to keep files small but text crisp.
+
+**Image size tiers (pick based on content complexity):**
+
+| Tier | Logical width | Actual pixels (2x DPI) | Best for | Approx compressed size |
+|------|--------------|----------------------|----------|----------------------|
+| Small | 800px | 1600px | Simple flowcharts, 3-5 boxes | 15-40KB |
+| Medium | 1000px | 2000px | Most diagrams, architecture overviews | 30-80KB |
+| Large | 1200px | 2400px | Dense diagrams, wide comparison tables | 60-150KB |
+
+**Default to Medium (1000px).** Only go Large if the diagram has dense text or many columns that would get cramped.
+
+**Option 1: Playwright (best quality, uses real browser rendering)**
+
+```bash
+# Install playwright if not available
+pip install playwright --break-system-packages
+python3 -m playwright install chromium
+
+# Convert SVG to high-DPI PNG via headless Chromium
+# Adjust viewport width per size tier: 800 / 1000 / 1200
+python3 << 'PYEOF'
+import asyncio
+from playwright.async_api import async_playwright
+
+async def svg_to_png(svg_path, png_path, width=1000, scale=2):
+    async with async_playwright() as p:
+        browser = await p.chromium.launch()
+        page = await browser.new_page(viewport={"width": width, "height": 800}, device_scale_factor=scale)
+        await page.goto(f"file://{svg_path}")
+        await page.wait_for_timeout(500)
+        svg_el = await page.query_selector("svg")
+        if svg_el:
+            await svg_el.screenshot(path=png_path)
+        else:
+            await page.screenshot(path=png_path, full_page=True)
+        await browser.close()
+
+asyncio.run(svg_to_png("/tmp/capture-diagram.svg", "/tmp/capture-diagram.png"))
+PYEOF
+```
+
+**Option 2: cairosvg at 2x DPI (faster, decent quality)**
+
+```bash
+pip install cairosvg --break-system-packages
+
+# Medium tier: 1000px logical, 2000px actual at 192 DPI
+python3 -c "from cairosvg import svg2png; svg2png(url='/tmp/capture-diagram.svg', write_to='/tmp/capture-diagram.png', output_width=2000, dpi=192)"
+
+# For Small tier: output_width=1600
+# For Large tier:  output_width=2400
+```
+
+**Then compress and upload:**
+
+```bash
+# Compress PNG -- pngquant gives 60-80% size reduction with negligible quality loss
+# Install if needed: apt-get install -y pngquant (Claude.ai container) or brew install pngquant (macOS)
+pngquant --quality=65-90 --speed 1 --force --output /tmp/capture-diagram-compressed.png /tmp/capture-diagram.png
+
+# Fall back to uncompressed if pngquant fails (e.g. already optimized or not installed)
+if [ ! -f /tmp/capture-diagram-compressed.png ]; then
+  cp /tmp/capture-diagram.png /tmp/capture-diagram-compressed.png
+fi
+
+# Upload compressed PNG to R2
+RESPONSE=$(curl -s -X POST $R2_UPLOAD_ENDPOINT \
+  -H "Authorization: Bearer $R2_AUTH_TOKEN" \
+  -H "Content-Type: image/png" \
+  -H "X-Filename: [SLUG]" \
+  --data-binary @/tmp/capture-diagram-compressed.png)
+
+IMAGE_URL=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['url'])")
+rm -f /tmp/capture-diagram.svg /tmp/capture-diagram.png /tmp/capture-diagram-compressed.png
+```
+
+**Decision: Playwright vs cairosvg?**
+- SVG uses web fonts or complex CSS: Playwright (browser renders these correctly, cairosvg doesn't)
+- SVG is simple shapes/text with standard fonts: cairosvg at 2x is fine and faster
+- Claude.ai container with limited install time: cairosvg (smaller install footprint)
 
 #### Pipeline B: JSX artifacts (Claude iOS, Claude.ai web)
 
@@ -313,12 +404,33 @@ Most JSX artifacts from Claude are charts, diagrams, tables, or simple layouts. 
 **Process:**
 1. Look at the JSX artifact that was generated in the conversation
 2. Re-express the visual content as SVG (Claude can do this directly)
-3. Upload the SVG to R2 using Pipeline A (convert to PNG first) or upload SVG directly
+3. Upload the SVG to R2 using Pipeline A (SVG direct upload is the default)
 4. Reference the R2 URL in the note markdown
+
+**When re-expressing JSX to SVG:**
+- Charts (bar, line, pie) -> SVG with `<rect>`, `<line>`, `<circle>`, `<path>`
+- Tables -> SVG with `<rect>` cells and `<text>` elements, or just use a markdown table instead
+- Flowcharts/diagrams -> SVG with boxes and arrows
+- Simple layouts -> SVG approximation of the key visual information
 
 **If the JSX is too complex to re-express as SVG** (heavy interactivity, animations, deeply nested state), fall back to:
 1. Include a text description of what the visual shows
 2. Embed the JSX source in a collapsed code block for later reference
+
+```markdown
+The diagram shows [description of the visual content].
+
+<details>
+<summary>JSX source (render in browser to view)</summary>
+
+\`\`\`jsx
+[FULL JSX SOURCE]
+\`\`\`
+
+</details>
+```
+
+This covers the iOS case where there's no bash or browser available.
 
 #### Pipeline C: Mermaid diagrams
 
@@ -328,13 +440,15 @@ cat > /tmp/capture-diagram.mmd << 'MMDEOF'
 [MERMAID SOURCE]
 MMDEOF
 
-# 2. Render with mermaid-cli (if available)
-npx -y @mermaid-js/mermaid-cli mmdc -i /tmp/capture-diagram.mmd -o /tmp/capture-diagram.png -w 1200
+# 2. Render with mermaid-cli -- prefer SVG output
+npx -y @mermaid-js/mermaid-cli mmdc -i /tmp/capture-diagram.mmd -o /tmp/capture-diagram.svg -w 1200
 
-# 3. Upload to R2 (same as Pipeline A step 3)
+# 3. Upload SVG to R2 (same as Pipeline A)
 ```
 
-If mermaid-cli is not available, fall back to including the mermaid source in a code block.
+If SVG output is not usable, render to PNG with higher quality: `mmdc -i /tmp/capture-diagram.mmd -o /tmp/capture-diagram.png -w 2400 -s 2`
+
+If mermaid-cli is not available, fall back to including the mermaid source in a code block (same approach as JSX fallback).
 
 #### Pipeline D: HTML widgets (Visualizer output)
 
@@ -345,7 +459,7 @@ The Visualizer tool produces HTML widgets that render inline in claude.ai. These
 
 **Capture strategy (prioritized):**
 
-1. **Convert to markdown table** (preferred for data-heavy widgets). If the HTML widget is essentially a styled table, comparison matrix, or scored list, convert it to a clean markdown table. This is the most portable format and renders everywhere (GitHub, Obsidian, any markdown viewer).
+1. **Convert to markdown table** (preferred for data-heavy widgets). If the HTML widget is essentially a styled table, comparison matrix, or scored list, convert it to a clean markdown table. This is the most portable format and renders everywhere (GitHub, Obsidian, any markdown viewer). Most Visualizer widgets from this conversation (phase mapping, hook scoring, repo evaluations) are best captured this way.
 
 2. **Convert to SVG** (for diagrams and flowcharts). If the HTML widget contains an inline SVG diagram, extract the SVG and run through Pipeline A.
 
